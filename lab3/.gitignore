@@ -1,0 +1,5 @@
+*
+!hw/verilog/mips/.
+!sim/Makefile
+!sim/tests/.
+!README
