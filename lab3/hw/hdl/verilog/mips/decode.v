@@ -227,9 +227,15 @@ module decode (
 //******************************************************************************
 
     wire isEqual = rs_data == rt_data;
+    wire rs_is_neg  = rs_data[31];          // sign bit
+    wire rs_is_zero = (rs_data == 32'b0);
 
-    assign jump_branch = |{isBEQ & isEqual,
-                           isBNE & ~isEqual};
+    assign jump_branch = (isBEQ & isEqual)
+                           | (isBNE & ~isEqual)
+                           | (isBGEZNL & ~rs_is_neg)
+                           | (isBGTZ   & ~rs_is_neg & ~rs_is_zero)
+                           | (isBLEZ   & (rs_is_neg | rs_is_zero))
+                           | (isBLTZNL & rs_is_neg);
 
     assign jump_target = isJ;
     assign jump_reg = 1'b0;
