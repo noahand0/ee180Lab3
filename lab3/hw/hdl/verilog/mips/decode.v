@@ -108,6 +108,7 @@ module decode (
             {`SLTIU, `DC6}:     alu_opcode = `ALU_SLTU;
             {`ANDI, `DC6}:      alu_opcode = `ALU_AND;
             {`ORI, `DC6}:       alu_opcode = `ALU_OR;
+            {`XORI, `DC6}:      alu_opcode = `ALU_XOR;
             {`LB, `DC6}:        alu_opcode = `ALU_ADD;
             {`LW, `DC6}:        alu_opcode = `ALU_ADD;
             {`LBU, `DC6}:       alu_opcode = `ALU_ADD;
@@ -121,6 +122,7 @@ module decode (
             {`SPECIAL, `SUBU}:  alu_opcode = `ALU_SUBU;
             {`SPECIAL, `AND}:   alu_opcode = `ALU_AND;
             {`SPECIAL, `OR}:    alu_opcode = `ALU_OR;
+            {`SPECIAL, `XOR}:   alu_opcode = `ALU_XOR;
             {`SPECIAL, `MOVN}:  alu_opcode = `ALU_PASSX;
             {`SPECIAL, `MOVZ}:  alu_opcode = `ALU_PASSX;
             {`SPECIAL, `SLT}:   alu_opcode = `ALU_SLT;
@@ -156,7 +158,10 @@ module decode (
     wire [31:0] imm_sign_extend = {{16{immediate[15]}}, immediate};
     wire [31:0] imm_upper = {immediate, 16'b0};
 
-    wire [31:0] imm = (op == `LUI) ? imm_upper : imm_sign_extend;
+    // Use sign extension for everything except logical operations which use zero extension
+    wire [31:0] imm = (op == `LUI) ? imm_upper : 
+                     (op == `XORI || op == `ORI || op == `ANDI) ? {16'b0, immediate} : 
+                     imm_sign_extend;
 
 //******************************************************************************
 // forwarding and stalling logic
@@ -170,20 +175,20 @@ module decode (
     wire forward_rs_ex = &{rs_addr == reg_write_addr_ex, rs_addr != `ZERO, reg_we_ex};
     wire forward_rt_ex = &{rt_addr == reg_write_addr_ex, rt_addr != `ZERO, reg_we_ex};
 
-    //assign rs_data = forward_rs_mem ? reg_write_data_mem : rs_data_in;
-
     // Determine the correct data sources with priority for the most recent data
     // For rs_data: prioritize EX forwarding over MEM forwarding
-    assign rs_data = forward_rs_ex ? alu_result_ex :
-                    forward_rs_mem ? reg_write_data_mem : 
-                    rs_data_in;
-
-    //assign rt_data = rt_data_in;
-
+    wire [31:0] rs_data_forward = forward_rs_ex ? alu_result_ex :
+               forward_rs_mem ? reg_write_data_mem : 
+               rs_data_in;
+                     
     // For rt_data: prioritize EX forwarding over MEM forwarding
-    assign rt_data = forward_rt_ex ? alu_result_ex :
-                    forward_rt_mem ? reg_write_data_mem : 
-                    rt_data_in;
+    wire [31:0] rt_data_forward = forward_rt_ex ? alu_result_ex :
+               forward_rt_mem ? reg_write_data_mem : 
+               rt_data_in;
+    
+    // Apply forwarding
+    assign rs_data = rs_data_forward;
+    assign rt_data = rt_data_forward;
 
     wire rs_mem_dependency = &{rs_addr == reg_write_addr_ex, mem_read_ex, rs_addr != `ZERO};
     wire rt_mem_dependency = &{rt_addr == reg_write_addr_ex, mem_read_ex, rt_addr != `ZERO};
@@ -191,10 +196,8 @@ module decode (
     wire isLUI = op == `LUI;
     wire read_from_rs = ~|{isLUI, jump_target, isShiftImm};
 
-    wire isALUImm = |{op == `ADDI, op == `ADDIU, op == `SLTI, op == `SLTIU, op == `ANDI, op == `ORI};
+    wire isALUImm = |{op == `ADDI, op == `ADDIU, op == `SLTI, op == `SLTIU, op == `ANDI, op == `ORI, op == `XORI};
     wire read_from_rt = ~|{isLUI, jump_target, isALUImm, mem_read};
-
-    //assign stall = rs_mem_dependency & read_from_rs;
 
     // Stall if there's a load-use hazard for either rs or rt
     assign stall = (rs_mem_dependency & read_from_rs) | (rt_mem_dependency & read_from_rt);
@@ -254,10 +257,19 @@ module decode (
     wire rs_is_neg = rs_data[31];
     wire rs_is_zero = (rs_data == 32'b0);
 
+    wire [31:0] pc_plus_4 = pc + 32'h4;
+    wire [31:0] branch_offset = {imm_sign_extend[29:0], 2'b00};  // Shift left by 2
+    assign branch_addr = pc_plus_4 + branch_offset;
+
 
     assign jump_branch = |{isBEQ & isEqual,
-                           isBNE & ~isEqual};
-
+                           isBNE & ~isEqual,
+                           isBGEZNL & ~rs_is_neg,
+                           isBGEZAL & ~rs_is_neg,
+                           isBGTZ & ~rs_is_neg & ~rs_is_zero,
+                           isBLEZ & (rs_is_neg | rs_is_zero),
+                           isBLTZNL & rs_is_neg,
+                           isBLTZAL & rs_is_neg};
     assign jump_target = isJ;
     assign jump_reg = 1'b0;
 
