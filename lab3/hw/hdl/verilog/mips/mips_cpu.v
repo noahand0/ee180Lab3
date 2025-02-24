@@ -48,6 +48,7 @@ module mips_cpu (
     wire stall, stall_r;
     wire en_if = ~stall & en;
     wire rst_id = stall & en;
+    wire [31:0] branch_addr;
 
     instruction_fetch if_stage (
         .clk            (clk),
@@ -56,7 +57,9 @@ module mips_cpu (
         .jump_target    (jump_target_id),
         .pc_id          (pc_id),
         .instr_id       (instr_id[25:0]),
-        .pc             (pc_if)
+        .pc             (pc_if),
+        .branch_addr    (branch_addr),
+        .jump_branch    (jump_branch_id)
     );
 
     assign pc = pc_if; // output pc to parent module
@@ -101,6 +104,9 @@ module mips_cpu (
         .mem_sc_mask_id     (mem_sc_mask_id),
         .mem_sc_id          (mem_sc_id),
         .stall              (stall),
+        .branch_addr        (branch_addr),
+
+      
 
         // inputs for forwarding/stalling from X
         .reg_we_ex          (reg_we_ex),
@@ -129,7 +135,7 @@ module mips_cpu (
     // needed for M stage
     dffarre #(32) mem_write_data_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_write_data_id), .q(mem_write_data_ex));
     dffarre mem_we_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_we_id & ~mem_sc_mask_id), .q(mem_we_ex));
-    dffarre mem_read_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(1'b0), .q());
+    dffarre mem_read_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_read_id), .q(mem_read_ex));
     dffarre mem_byte_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_byte_id), .q(mem_byte_ex));
     dffarre mem_signextend_id2ex (.clk(clk), .ar(rst), .r(rst_id), .en(en), .d(mem_signextend_id), .q(mem_signextend_ex));
 
@@ -153,7 +159,7 @@ module mips_cpu (
     wire [31:0] sc_result = {{31{1'b0}},(mem_sc_ex & mem_we_ex)};
     wire [31:0] alu_sc_result_ex = alu_result_ex;   // TODO: Need to conditionally inject SC value
     dffare #(32) alu_result_ex2mem (.clk(clk), .r(rst), .en(en), .d(alu_sc_result_ex), .q(alu_result_mem));
-    dffare mem_read_ex2mem (.clk(clk), .r(rst), .en(en), .d(1'b0), .q());
+    dffare mem_read_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_read_ex), .q(mem_read_mem));
     dffare mem_byte_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_byte_ex), .q(mem_byte_mem));
     dffare mem_signextend_ex2mem (.clk(clk), .r(rst), .en(en), .d(mem_signextend_ex), .q(mem_signextend_mem));
 

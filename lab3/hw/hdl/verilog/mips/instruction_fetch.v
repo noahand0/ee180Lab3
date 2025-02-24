@@ -12,15 +12,22 @@ module instruction_fetch (
     input jump_target,
     input [31:0] pc_id,
     input [25:0] instr_id,  // Lower 26 bits of the instruction
+    input [31:0] branch_addr,
+    input jump_branch,
 
-    output [31:0] pc
+    output [31:0] pc 
 );
 
 
     wire [31:0] pc_id_p4 = pc_id + 3'h4;
     wire [31:0] j_addr = {pc_id_p4[31:28], instr_id[25:0], 2'b0};
+    wire [31:0] pc_next;
 
-    wire [31:0] pc_next = (jump_target) ? j_addr : (pc + 3'h4);
+    assign pc_next =
+    jump_target  ? j_addr :
+    jump_branch  ? branch_addr :
+                   pc + 32'h4;
+
 
     dffare #(32) pc_reg (.clk(clk), .r(rst), .en(en), .d(pc_next), .q(pc));
 

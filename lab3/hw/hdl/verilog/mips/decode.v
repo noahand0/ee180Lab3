@@ -44,7 +44,9 @@ module decode (
 
     input reg_we_mem,
     input [4:0] reg_write_addr_mem,
-    input [31:0] reg_write_data_mem
+    input [31:0] reg_write_data_mem,
+
+    output [31:0] branch_addr
 );
 
 //******************************************************************************
@@ -162,10 +164,29 @@ module decode (
 
     wire forward_rs_mem = &{rs_addr == reg_write_addr_mem, rs_addr != `ZERO, reg_we_mem};
 
-    assign rs_data = forward_rs_mem ? reg_write_data_mem : rs_data_in;
-    assign rt_data = rt_data_in;
+    wire forward_rt_mem = &{rt_addr == reg_write_addr_mem, rt_addr != `ZERO, reg_we_mem};
+
+    // Forwarding from EX/MEM (1 stage later) to ID/EX
+    wire forward_rs_ex = &{rs_addr == reg_write_addr_ex, rs_addr != `ZERO, reg_we_ex};
+    wire forward_rt_ex = &{rt_addr == reg_write_addr_ex, rt_addr != `ZERO, reg_we_ex};
+
+    //assign rs_data = forward_rs_mem ? reg_write_data_mem : rs_data_in;
+
+    // Determine the correct data sources with priority for the most recent data
+    // For rs_data: prioritize EX forwarding over MEM forwarding
+    assign rs_data = forward_rs_ex ? alu_result_ex :
+                    forward_rs_mem ? reg_write_data_mem : 
+                    rs_data_in;
+
+    //assign rt_data = rt_data_in;
+
+    // For rt_data: prioritize EX forwarding over MEM forwarding
+    assign rt_data = forward_rt_ex ? alu_result_ex :
+                    forward_rt_mem ? reg_write_data_mem : 
+                    rt_data_in;
 
     wire rs_mem_dependency = &{rs_addr == reg_write_addr_ex, mem_read_ex, rs_addr != `ZERO};
+    wire rt_mem_dependency = &{rt_addr == reg_write_addr_ex, mem_read_ex, rt_addr != `ZERO};
 
     wire isLUI = op == `LUI;
     wire read_from_rs = ~|{isLUI, jump_target, isShiftImm};
@@ -173,7 +194,10 @@ module decode (
     wire isALUImm = |{op == `ADDI, op == `ADDIU, op == `SLTI, op == `SLTIU, op == `ANDI, op == `ORI};
     wire read_from_rt = ~|{isLUI, jump_target, isALUImm, mem_read};
 
-    assign stall = rs_mem_dependency & read_from_rs;
+    //assign stall = rs_mem_dependency & read_from_rs;
+
+    // Stall if there's a load-use hazard for either rs or rt
+    assign stall = (rs_mem_dependency & read_from_rs) | (rt_mem_dependency & read_from_rt);
 
     assign jr_pc = rs_data;
     assign mem_write_data = rt_data;
@@ -207,7 +231,7 @@ module decode (
 // Memory control
 //******************************************************************************
     assign mem_we = |{op == `SW, op == `SB, op == `SC};    // write to memory
-    assign mem_read = 1'b0;                     // use memory data for writing to a register
+    assign mem_read = |{op == `LW, op == `LB, op == `LBU};                     // use memory data for writing to a register
     assign mem_byte = |{op == `SB, op == `LB, op == `LBU};    // memory operations use only one byte
     assign mem_signextend = ~|{op == `LBU};     // sign extend sub-word memory reads
 
@@ -227,15 +251,12 @@ module decode (
 //******************************************************************************
 
     wire isEqual = rs_data == rt_data;
-    wire rs_is_neg  = rs_data[31];          // sign bit
+    wire rs_is_neg = rs_data[31];
     wire rs_is_zero = (rs_data == 32'b0);
 
-    assign jump_branch = (isBEQ & isEqual)
-                           | (isBNE & ~isEqual)
-                           | (isBGEZNL & ~rs_is_neg)
-                           | (isBGTZ   & ~rs_is_neg & ~rs_is_zero)
-                           | (isBLEZ   & (rs_is_neg | rs_is_zero))
-                           | (isBLTZNL & rs_is_neg);
+
+    assign jump_branch = |{isBEQ & isEqual,
+                           isBNE & ~isEqual};
 
     assign jump_target = isJ;
     assign jump_reg = 1'b0;
