@@ -130,8 +130,11 @@ module decode (
             {`SPECIAL, `SLTU}:  alu_opcode = `ALU_SLTU;
             {`SPECIAL, `SLL}:   alu_opcode = `ALU_SLL;
             {`SPECIAL, `SRL}:   alu_opcode = `ALU_SRL;
+            {`SPECIAL, `SRA}:   alu_opcode = `ALU_SRA;
+            {`SPECIAL, `SRAV}:  alu_opcode = `ALU_SRA;
             {`SPECIAL, `SLLV}:  alu_opcode = `ALU_SLL;
             {`SPECIAL, `SRLV}:  alu_opcode = `ALU_SRL;
+            {`SPECIAL2, `MUL}:  alu_opcode = `ALU_MUL;
             // compare rs data to 0, only care about 1 operand
             {`BGTZ, `DC6}:      alu_opcode = `ALU_PASSX;
             {`BLEZ, `DC6}:      alu_opcode = `ALU_PASSX;
