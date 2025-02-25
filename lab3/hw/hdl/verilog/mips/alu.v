@@ -38,8 +38,10 @@ module alu (
             `ALU_SLTU:  alu_result = alu_op_x < alu_op_y;
             `ALU_XOR:   alu_result = alu_op_x ^ alu_op_y; // This I just added
             `ALU_SLT:   alu_result = alu_op_x_signed < alu_op_y_signed;
+            `ALU_MUL:   alu_result = alu_op_x * alu_op_y;
             `ALU_SRL:   alu_result = alu_op_y >> alu_op_x[4:0]; // shift operations are Y >> X
             `ALU_SLL:   alu_result = alu_op_y << alu_op_x[4:0];
+            `ALU_SRA:   alu_result = alu_op_y_signed >>> alu_op_x[4:0];
             `ALU_PASSX: alu_result = alu_op_x;
             `ALU_PASSY: alu_result = alu_op_y;
             default:    alu_result = 32'hxxxxxxxx;   // undefined
@@ -52,11 +54,15 @@ module alu (
 
     wire add_check = alu_opcode == `ALU_ADD;
     wire sub_check = alu_opcode == `ALU_SUB;
+    // wire mul_check = alu_opcode == `ALU_MUL;
 
     wire add_pos_over = &{~x_neg, ~y_neg, alu_neg}; // postive + positive = negative
     wire add_neg_over = &{x_neg, y_neg, ~alu_neg}; // negative + negative = positive
     wire sub_pos_over = &{~x_neg, y_neg, alu_neg}; // positive - negative = negative
     wire sub_neg_over = &{x_neg, ~y_neg, ~alu_neg}; // negative - positive = positive
+
+    // wire mul_pos_pos_over = &{~x_new, ~y_neg, alu_neg} // positive * positive = negative
+    // wire mul_pos_neg_over =
 
     assign alu_op_y_zero = ~|{alu_op_y};
 
