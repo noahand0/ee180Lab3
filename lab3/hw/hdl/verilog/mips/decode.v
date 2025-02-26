@@ -44,9 +44,7 @@ module decode (
 
     input reg_we_mem,
     input [4:0] reg_write_addr_mem,
-    input [31:0] reg_write_data_mem,
-
-    output [31:0] branch_addr
+    input [31:0] reg_write_data_mem
 );
 
 //******************************************************************************
@@ -83,6 +81,9 @@ module decode (
 //******************************************************************************
 
     wire isJ    = (op == `J);
+    wire isJR   = (op == `SPECIAL) & (funct == 6'b001000);
+    wire isJAL  = (op == `JAL);
+    wire isJALR = (op == `SPECIAL) & (funct == `JALR);
 
 //******************************************************************************
 // shift instruction decode
@@ -92,9 +93,11 @@ module decode (
     wire isSRL = (op == `SPECIAL) & (funct == `SRL);
     wire isSLLV = (op == `SPECIAL) & (funct == `SLLV);
     wire isSRLV = (op == `SPECIAL) & (funct == `SRLV);
+    wire isSRA = (op == `SPECIAL) & (funct == `SRA);
+    wire isSRAV = (op == `SPECIAL) & (funct == `SRAV);
 
-    wire isShiftImm = isSLL | isSRL;
-    wire isShift = isShiftImm | isSLLV | isSRLV;
+    wire isShiftImm = isSLL | isSRL | isSRA;
+    wire isShift = isShiftImm | isSLLV | isSRLV | isSRAV;
 
 //******************************************************************************
 // ALU instructions decode / control signal for ALU datapath
@@ -123,14 +126,18 @@ module decode (
             {`SPECIAL, `AND}:   alu_opcode = `ALU_AND;
             {`SPECIAL, `OR}:    alu_opcode = `ALU_OR;
             {`SPECIAL, `XOR}:   alu_opcode = `ALU_XOR;
+            {`SPECIAL, `NOR}:   alu_opcode = `ALU_NOR;
             {`SPECIAL, `MOVN}:  alu_opcode = `ALU_PASSX;
             {`SPECIAL, `MOVZ}:  alu_opcode = `ALU_PASSX;
             {`SPECIAL, `SLT}:   alu_opcode = `ALU_SLT;
             {`SPECIAL, `SLTU}:  alu_opcode = `ALU_SLTU;
             {`SPECIAL, `SLL}:   alu_opcode = `ALU_SLL;
             {`SPECIAL, `SRL}:   alu_opcode = `ALU_SRL;
+            {`SPECIAL, `SRA}:   alu_opcode = `ALU_SRA;
+            {`SPECIAL, `SRAV}:  alu_opcode = `ALU_SRA;
             {`SPECIAL, `SLLV}:  alu_opcode = `ALU_SLL;
             {`SPECIAL, `SRLV}:  alu_opcode = `ALU_SRL;
+            {`SPECIAL2, `MUL}:  alu_opcode = `ALU_MUL;
             // compare rs data to 0, only care about 1 operand
             {`BGTZ, `DC6}:      alu_opcode = `ALU_PASSX;
             {`BLEZ, `DC6}:      alu_opcode = `ALU_PASSX;
@@ -159,9 +166,9 @@ module decode (
     wire [31:0] imm_upper = {immediate, 16'b0};
 
     // Use sign extension for everything except logical operations which use zero extension
+    wire [31:0] imm_zero_extend = {16'b0, immediate};
     wire [31:0] imm = (op == `LUI) ? imm_upper : 
-                     (op == `XORI || op == `ORI || op == `ANDI) ? {16'b0, immediate} : 
-                     imm_sign_extend;
+                     (op == `XORI || op == `ORI || op == `ANDI) ? imm_zero_extend  : imm_sign_extend;
 
 //******************************************************************************
 // forwarding and stalling logic
@@ -177,6 +184,7 @@ module decode (
 
     // Determine the correct data sources with priority for the most recent data
     // For rs_data: prioritize EX forwarding over MEM forwarding
+    // Apply forwarding
     wire [31:0] rs_data_forward = forward_rs_ex ? alu_result_ex :
                forward_rs_mem ? reg_write_data_mem : 
                rs_data_in;
@@ -189,6 +197,8 @@ module decode (
     // Apply forwarding
     assign rs_data = rs_data_forward;
     assign rt_data = rt_data_forward;
+    
+   
 
     wire rs_mem_dependency = &{rs_addr == reg_write_addr_ex, mem_read_ex, rs_addr != `ZERO};
     wire rt_mem_dependency = &{rt_addr == reg_write_addr_ex, mem_read_ex, rt_addr != `ZERO};
@@ -220,7 +230,7 @@ module decode (
     // otherwise use rt
 
     assign alu_op_y = (use_imm) ? imm : rt_data;
-    assign reg_write_addr = (use_imm) ? rt_addr : rd_addr;
+    assign reg_write_addr = isJALR ? 5'd31 : (use_imm) ? rt_addr : rd_addr;
 
     // determine when to write back to a register (any operation that isn't an
     // unconditional store, non-linking branch, or non-linking jump)
@@ -257,9 +267,9 @@ module decode (
     wire rs_is_neg = rs_data[31];
     wire rs_is_zero = (rs_data == 32'b0);
 
-    wire [31:0] pc_plus_4 = pc + 32'h4;
-    wire [31:0] branch_offset = {imm_sign_extend[29:0], 2'b00};  // Shift left by 2
-    assign branch_addr = pc_plus_4 + branch_offset;
+    // wire [31:0] pc_plus_4 = pc + 32'h4;
+    // wire [31:0] branch_offset = {imm_sign_extend[29:0], 2'b00};  // Shift left by 2
+    // assign branch_addr = pc_plus_4 + branch_offset;
 
 
     assign jump_branch = |{isBEQ & isEqual,
@@ -270,7 +280,7 @@ module decode (
                            isBLEZ & (rs_is_neg | rs_is_zero),
                            isBLTZNL & rs_is_neg,
                            isBLTZAL & rs_is_neg};
-    assign jump_target = isJ;
-    assign jump_reg = 1'b0;
+    assign jump_target = isJ ;
+    assign jump_reg = isJR | isJALR;
 
 endmodule

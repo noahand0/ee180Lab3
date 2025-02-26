@@ -48,7 +48,6 @@ module mips_cpu (
     wire stall, stall_r;
     wire en_if = ~stall & en;
     wire rst_id = stall & en;
-    wire [31:0] branch_addr;
 
     instruction_fetch if_stage (
         .clk            (clk),
@@ -58,8 +57,9 @@ module mips_cpu (
         .pc_id          (pc_id),
         .instr_id       (instr_id[25:0]),
         .pc             (pc_if),
-        .branch_addr    (branch_addr),
-        .jump_branch    (jump_branch_id)
+        .jump_branch    (jump_branch_id),
+        .jump_reg       (jump_reg_id),
+        .jr_pc          (jr_pc_id)
     );
 
     assign pc = pc_if; // output pc to parent module
@@ -104,7 +104,6 @@ module mips_cpu (
         .mem_sc_mask_id     (mem_sc_mask_id),
         .mem_sc_id          (mem_sc_id),
         .stall              (stall),
-        .branch_addr        (branch_addr),
 
       
 
