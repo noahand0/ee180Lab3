@@ -229,9 +229,8 @@ module decode (
     // for immediate operations, use Imm
     // otherwise use rt
 
-    assign alu_op_y = (use_imm) ? imm : rt_data;
-    assign reg_write_addr = isJALR ? 5'd31 : (use_imm) ? rt_addr : rd_addr;
-
+    assign alu_op_y = (isJAL || isJALR) ? 32'd8 : (use_imm) ? imm : rt_data;
+    assign reg_write_addr = (isJALR || isJAL) ? 5'd31 : (use_imm) ? rt_addr : rd_addr;
     // determine when to write back to a register (any operation that isn't an
     // unconditional store, non-linking branch, or non-linking jump)
     assign reg_we = ~|{(mem_we & (op != `SC)), isJ, isBGEZNL, isBGTZ, isBLEZ, isBLTZNL, isBNE, isBEQ};
@@ -244,7 +243,7 @@ module decode (
 // Memory control
 //******************************************************************************
     assign mem_we = |{op == `SW, op == `SB, op == `SC};    // write to memory
-    assign mem_read = |{op == `LW, op == `LB, op == `LBU};                     // use memory data for writing to a register
+    assign mem_read = |{op == `LW, op == `LB, op == `LBU, op == `LH};                     // use memory data for writing to a register
     assign mem_byte = |{op == `SB, op == `LB, op == `LBU};    // memory operations use only one byte
     assign mem_signextend = ~|{op == `LBU};     // sign extend sub-word memory reads
 
@@ -280,7 +279,8 @@ module decode (
                            isBLEZ & (rs_is_neg | rs_is_zero),
                            isBLTZNL & rs_is_neg,
                            isBLTZAL & rs_is_neg};
-    assign jump_target = isJ ;
+
+    assign jump_target = isJ | isJAL;
     assign jump_reg = isJR | isJALR;
 
 endmodule
