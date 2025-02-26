@@ -24,6 +24,7 @@ module decode (
     output wire [31:0] mem_write_data,
     output wire mem_read,
     output wire mem_byte,
+    output wire mem_half,
     output wire mem_signextend,
     output wire reg_we,
     output wire movn,
@@ -115,6 +116,7 @@ module decode (
             {`LB, `DC6}:        alu_opcode = `ALU_ADD;
             {`LW, `DC6}:        alu_opcode = `ALU_ADD;
             {`LBU, `DC6}:       alu_opcode = `ALU_ADD;
+            {`LH, `DC6}:        alu_opcode = `ALU_ADD;
             {`SB, `DC6}:        alu_opcode = `ALU_ADD;
             {`SW, `DC6}:        alu_opcode = `ALU_ADD;
             {`BEQ, `DC6}:       alu_opcode = `ALU_SUBU;
@@ -174,9 +176,10 @@ module decode (
 // forwarding and stalling logic
 //******************************************************************************
 
-    wire forward_rs_mem = &{rs_addr == reg_write_addr_mem, rs_addr != `ZERO, reg_we_mem};
+    // ~forward_rs/rt_ex neatly encapsulates double hazard solution
+    wire forward_rs_mem = &{rs_addr == reg_write_addr_mem, rs_addr != `ZERO, reg_we_mem, ~forward_rs_ex};
 
-    wire forward_rt_mem = &{rt_addr == reg_write_addr_mem, rt_addr != `ZERO, reg_we_mem};
+    wire forward_rt_mem = &{rt_addr == reg_write_addr_mem, rt_addr != `ZERO, reg_we_mem, ~forward_rt_ex};
 
     // Forwarding from EX/MEM (1 stage later) to ID/EX
     wire forward_rs_ex = &{rs_addr == reg_write_addr_ex, rs_addr != `ZERO, reg_we_ex};
@@ -245,6 +248,7 @@ module decode (
     assign mem_we = |{op == `SW, op == `SB, op == `SC};    // write to memory
     assign mem_read = |{op == `LW, op == `LB, op == `LBU, op == `LH};                     // use memory data for writing to a register
     assign mem_byte = |{op == `SB, op == `LB, op == `LBU};    // memory operations use only one byte
+    assign mem_half = |{op == `SH, op == `LH};
     assign mem_signextend = ~|{op == `LBU};     // sign extend sub-word memory reads
 
 //******************************************************************************
