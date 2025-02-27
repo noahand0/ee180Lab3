@@ -117,8 +117,10 @@ module decode (
             {`LW, `DC6}:        alu_opcode = `ALU_ADD;
             {`LBU, `DC6}:       alu_opcode = `ALU_ADD;
             {`LH, `DC6}:        alu_opcode = `ALU_ADD;
+            {`LL, `DC6}:        alu_opcode = `ALU_ADD;
             {`SB, `DC6}:        alu_opcode = `ALU_ADD;
             {`SW, `DC6}:        alu_opcode = `ALU_ADD;
+            {`SC, `DC6}:        alu_opcode = `ALU_ADD;
             {`BEQ, `DC6}:       alu_opcode = `ALU_SUBU;
             {`BNE, `DC6}:       alu_opcode = `ALU_SUBU;
             {`SPECIAL, `ADD}:   alu_opcode = `ALU_ADD;
@@ -176,7 +178,6 @@ module decode (
 // forwarding and stalling logic
 //******************************************************************************
 
-    // ~forward_rs/rt_ex neatly encapsulates double hazard solution
     wire forward_rs_mem = &{rs_addr == reg_write_addr_mem, rs_addr != `ZERO, reg_we_mem, ~forward_rs_ex};
 
     wire forward_rt_mem = &{rt_addr == reg_write_addr_mem, rt_addr != `ZERO, reg_we_mem, ~forward_rt_ex};
@@ -245,8 +246,8 @@ module decode (
 //******************************************************************************
 // Memory control
 //******************************************************************************
-    assign mem_we = |{op == `SW, op == `SB, op == `SC};    // write to memory
-    assign mem_read = |{op == `LW, op == `LB, op == `LBU, op == `LH};                     // use memory data for writing to a register
+    assign mem_we = |{op == `SW, op == `SB, op == `SH, op == `SC};    // write to memory
+    assign mem_read = |{op == `LW, op == `LB, op == `LBU, op == `LH, op == `LL};                     // use memory data for writing to a register
     assign mem_byte = |{op == `SB, op == `LB, op == `LBU};    // memory operations use only one byte
     assign mem_half = |{op == `SH, op == `LH};
     assign mem_signextend = ~|{op == `LBU};     // sign extend sub-word memory reads
@@ -256,11 +257,15 @@ module decode (
 //******************************************************************************
     assign mem_sc_id = (op == `SC);
 
-    // 'atomic_id' is high when a load-linked has not been followed by a store.
-    assign atomic_id = 1'b0;
+    // 'atomic_id' is high when a load-linked has not been followed by a store. 
+    // assign atomic_id = &{~mem_we, atomic_ex, op == `LL}; //uhh still need to check op == LL
+    assign atomic_id = atomic_ex ? ~mem_we : (op == `LL);
 
     // 'mem_sc_mask_id' is high when a store conditional should not store
-    assign mem_sc_mask_id = 1'b0;
+    // sc shouldn't store if the linked mem has changed...
+    assign mem_sc_mask_id = ~mem_sc_id  ? 1'b0 : ~atomic_ex;
+    //assign mem_sc_mask_id = 1'b0;
+    
 
 //******************************************************************************
 // Branch resolution
