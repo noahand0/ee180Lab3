@@ -1,11 +1,6 @@
-Partner and group names
-• List of instructions implemented
-• Description of changes made to the control and datapath to handle hazards and
-forwarding
-
 Names: Nicole Mulvey and Noah Anderson
 Instructions Implmented: add, addi, addiu, addu, and, andi, beq, bgez, bgtz, blez, bltz, bne, j, jal, jalr, jr, lb, lbu, lh, ll, lui, lw, movn, movz, mul, nor, or, ori, sb, sc, sh,
 sll, sllv, slt, slti, sltiu, sltu, sra, srav, srl, srlv, sub, subu, sw, xor, xori
-Changes Made:
+Changes Made: 
 
 
