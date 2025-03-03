@@ -121,6 +121,7 @@ module decode (
             {`SB, `DC6}:        alu_opcode = `ALU_ADD;
             {`SW, `DC6}:        alu_opcode = `ALU_ADD;
             {`SC, `DC6}:        alu_opcode = `ALU_ADD;
+            {`SH, `DC6}:        alu_opcode = `ALU_ADD;
             {`BEQ, `DC6}:       alu_opcode = `ALU_SUBU;
             {`BNE, `DC6}:       alu_opcode = `ALU_SUBU;
             {`SPECIAL, `ADD}:   alu_opcode = `ALU_ADD;
