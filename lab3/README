@@ -1,7 +1,11 @@
 Names: Nicole Mulvey and Noah Anderson
-Instructions Implmented: add, addi, addiu, addu, and, andi, beq, bgez, bgtz, blez, bltz, bne, j, jal, jalr, jr, lb, lbu, lh, ll, lui, lw, movn, movz, mul, nor, or, ori, sb, sc, sh,
-sll, sllv, slt, slti, sltiu, sltu, sra, srav, srl, srlv, sub, subu, sw, xor, xori
+
+Instructions Implmented: add, addi, addiu, addu, and, andi, beq, bgez, bgtz, blez, bltz, bne, j, jal, jalr, jr, lb, lbu, lh, ll, lui, lw, movn, movz, mul, nor, or, ori, sb, 
+sc, sh,sll, sllv, slt, slti, sltiu, sltu, sra, srav, srl, srlv, sub, subu, sw, xor, xori
+
 Changes Made: The changes that were made in order to be able to handle forwarding and stalls included updating the forading logic for registers rs and rt, and completed the 
-the stalling logic for register. 
+the stalling logic for register. We implmented forwarding for 1 stage later from EX/MEM to ID/EX and 2 stages later from MEM/WB to ID/EX. We also implmented forwarding signals to 
+have forwardization, which included rs_ex and rt_ex. For stalling we implmented stall signals for load use hazards and dependency detection for rt, We also makde sure to handle 
+branch detection and making sure to resolve it in the ID stage. 
 
 
