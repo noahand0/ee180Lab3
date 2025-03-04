@@ -1,6 +1,7 @@
 Names: Nicole Mulvey and Noah Anderson
 Instructions Implmented: add, addi, addiu, addu, and, andi, beq, bgez, bgtz, blez, bltz, bne, j, jal, jalr, jr, lb, lbu, lh, ll, lui, lw, movn, movz, mul, nor, or, ori, sb, sc, sh,
 sll, sllv, slt, slti, sltiu, sltu, sra, srav, srl, srlv, sub, subu, sw, xor, xori
-Changes Made: 
+Changes Made: The changes that were made in order to be able to handle forwarding and stalls included updating the forading logic for registers rs and rt, and completed the 
+the stalling logic for register. 
 
 
