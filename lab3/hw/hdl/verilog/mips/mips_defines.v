@@ -24,6 +24,8 @@
 `define SRLV  6'b000110
 `define SRAV  6'b000111
 
+`define ABSADD 6'b110001  
+
 // OPCODES
 `define ADDI  6'b001000
 `define ADDIU 6'b001001
@@ -36,9 +38,11 @@
 `define LL    6'b110000
 `define LW    6'b100011
 `define LB    6'b100000
+`define LH    6'b100001
 `define LBU   6'b100100
 `define SB    6'b101000
 `define SC    6'b111000
+`define SH    6'b101001
 `define SW    6'b101011
 
 // FUNCTION CODES (more are above for shifts)
@@ -114,3 +118,4 @@
 `define ALU_ADD 4'd13
 `define ALU_SUB 4'd14
 `define ALU_MUL 4'd15
+`define ALU_ABSADD 4'd16
