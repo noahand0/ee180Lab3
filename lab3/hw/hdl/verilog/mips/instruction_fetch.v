@@ -29,10 +29,10 @@ module instruction_fetch (
 
 
     assign pc_next =
-    jump_target  ? j_addr :
-    jump_branch  ? branch_addr :
-    jump_reg ? jr_pc :
-                   pc + 32'h4;
+                    jump_target  ? j_addr :
+                    jump_branch  ? branch_addr :
+                    jump_reg ? jr_pc :
+                                pc + 32'h4;
 
 
     dffare #(32) pc_reg (.clk(clk), .r(rst), .en(en), .d(pc_next), .q(pc));
