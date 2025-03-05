@@ -21,13 +21,13 @@ boot:
     ori     $s1, $0, 1          # Prepare the 'done' status
     lui     $t0, 0              # Load some valid address 0x00003210 to register $t0
     ori     $t0, $t0, 0x3210
-    lui     $t1, 0xde0f
-    ori     $t1, $t1, 0xbeef    # $t1 contains 0xde0fbeef
-    sw      $t1, 0($t0)         # mem at address $t0 holds 0xde0fbeef
-    lh      $s2, 0($t0)         # 0xffffde0f
+    lui     $t1, 0xdead
+    ori     $t1, $t1, 0xbeef    # $t1 contains 0xdeadbeef
+    sw      $t1, 0($t0)         # mem at address $t0 holds 0xdeadbeef
+    lh      $s2, 0($t0)         # 0xffffdead
     lh      $s3, 2($t0)         # 0xffffbeef
     lui     $t2, 0xffff
-    ori     $t2, $t2, 0xde0f
+    ori     $t2, $t2, 0xdead
     lui     $t3, 0xffff
     ori     $t3, $t3, 0xbeef 
 
