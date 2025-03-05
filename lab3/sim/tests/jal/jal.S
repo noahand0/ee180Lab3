@@ -19,6 +19,7 @@ boot:
     ori $s1, $0, 1 # Prepare the 'done' status
     jal $target    # Jump to target and store return address in $ra
     ori $v0, $0, 0 # The test result starts as a failure
+    ori $v0, $0, 1 # Set the result to pass
 $finish:
 
     sw $v0, 4($s0)
@@ -27,6 +28,5 @@ $done:
     j $done
 
 $target:
-    j $finish
-    ori $v0, $0, 1 # Set the result to pass
+    j $ra
  .end boot
